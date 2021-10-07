@@ -77,6 +77,46 @@ ggplot(df, aes(x = distance, y = nh4_off))+
 
 # So this model feels adequate for now (R2 ~ 0.75). Certainly not perfect and we could refine this model, so that the initial decline isn't so steep using some other nonlinear functions. 
 
+lm3 <- lm(log(nh4_off+1) ~ distance + sfdm_g, df)
+summary(lm3)
+plot(residuals(lm3)~distance, df)
+
+
+lm3.more <- glm(I(nh4_off+0.001) ~ distance + sfdm_g, df, family = Gamma(link = "inverse"))
+summary(lm3.more)
+plot(residuals(lm3.more)~distance,df)
+
+lm3.alt <- lm(log(nh4_u_m) ~ distance + sfdm_g, df)
+summary(lm3.alt)
+
+newdat <- expand.grid(distance = seq(0,4,length.out = 100), sfdm_g = c(min(df$sfdm_g), mean(df$sfdm_g), max(df$sfdm_g)))
+newdat$nh4_off <- exp(predict(lm3, newdata = newdat))
+newdat$nh4_u_m <- exp(predict(lm3.alt, newdata = newdat))
+newdat$nh4_more <- predict(lm3.more, newdata = newdat, type = "response")
+
+exp(predict(lm3.alt, newdata = list(distance = 100, sfdm_g = max(df$sfdm_g))))
+
+ggplot(df, aes(x = distance, y = nh4_u_m))+
+  geom_point(aes(size = sfdm_g, color = site))+
+  geom_line(data = newdat, aes(x = distance, y = nh4_u_m, group = sfdm_g))+
+  geom_hline(yintercept = 0)
+
+ggplot(df, aes(x = distance, y = nh4_u_m))+
+  geom_point(aes(size = sfdm_g, color = site))+
+  geom_line(data = newdat, aes(x = distance, y = nh4_u_m, group = sfdm_g))+
+  scale_y_log10()
+
+ggplot(df, aes(x = distance, y = nh4_off))+
+  geom_point(aes(size = sfdm_g, color = site))+
+  geom_line(data = newdat, aes(x = distance, y = nh4_off, group = sfdm_g))+
+  geom_hline(yintercept = 0)
+
+
+ggplot(df, aes(x = distance, y = nh4_off))+
+  geom_point(aes(size = sfdm_g, color = site))+
+  geom_line(data = newdat, aes(x = distance, y = nh4_more, group = sfdm_g))+
+  geom_hline(yintercept = 0)
+
 #----------------------------------------------------------------------------------
 ## Extrapolate to one site
 #----------------------------------------------------------------------------------
