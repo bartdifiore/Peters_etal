@@ -1,3 +1,6 @@
+library(tidyverse)
+
+
 ####WATER NUTRIENTS#####
 water_chem <- read.csv("data/water_nutrients.csv",stringsAsFactors = F,na.strings=".")
 water_chem$Density [water_chem$Count %in% c(12,16,20)] <-"High"
@@ -207,10 +210,44 @@ ggsave(filename = "figures/difference.png", width = 10, height = 8)
 
 
 
+# Statistical analyses
 
 
+temp <- d %>% dplyr::select(-junk) %>% group_by(plot, period, dist_x, dist_y) %>%
+  pivot_wider(names_from = period, values_from = z) %>%
+  mutate(diff.z = (`Open season` - `Closed season`) / (`Closed season` + `Open season`)) %>%
+  rename(open = `Open season`, closed = `Closed season`)
+
+ggplot(temp, aes(x = closed, y = open))+
+  geom_point(aes(color = plot, shape = status))+
+  facet_wrap(~ plot)
+
+ggplot(d, aes(x = period, y = z))+
+  geom_boxplot(aes(color = status))
+
+library(lme4)
+library(lmerTest)
+mod.lmer <- lmer(z ~ period*status + (1|plot), d)
+summary(mod.lmer)
+car::qqPlot(residuals(mod.lmer))
+hist(residuals(mod.lmer))
 
 
+ls_means(mod.lmer, which = c(""))
+emmeans::emmeans(mod.lmer,  ~ period * status,)
+
+
+pred <- ggeffects::ggpredict(mod.lmer, terms = ~period*status)
+
+plot(pred)
+
+
+mod.glmer <- glmer(z ~ period*status + (1|plot), d, family = Gamma(link = "log"))
+summary(mod.glmer)
+car::qqPlot(residuals(mod.glmer))
+hist(residuals(mod.glmer))
+pred <- ggeffects::ggpredict(mod.glmer, terms = ~period*status)
+plot(pred)
 
 
 
