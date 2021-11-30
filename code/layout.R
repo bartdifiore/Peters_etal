@@ -8,7 +8,7 @@ coords <- read.csv("data/quadrat_coords.csv") %>% rename_all(tolower)
 
 plot(dist_y ~ dist_x, coords)
 
-transects <- cbind(c(0, 5, 10, 15), c(0, 0, 0, 0), c(0, 5, 10, 15), c(20,20,20,20))
+utransects <- cbind(c(0, 5, 10, 15), c(0, 0, 0, 0), c(0, 5, 10, 15), c(20,20,20,20))
 ID.trans <- c("A", "B", "C", "D")
 
 a <- vector('list', length(2))
@@ -59,9 +59,12 @@ sp::plot(polysB)
 
 
 coordinates(coords) <- ~ dist_x + dist_y
+
+png(filename = "figures/layout2.png", width = 1000, height = 750)
 plot(coords)
 plot(polysB, add = T)
 text(coords, ID, cex = 0.5)
 plot(transect.lines, add = T)
-axis(side = c(1))
+axis(side = c(1), at = c(-5, -1.5, 0, 1.5, 3.5, 5, 6.5, 8.5, 10, 11.5, 13.5, 15, 16.5, 20), labels = c(-5, -1.5, 0, 1.5, 3.5, 5, 6.5, 8.5, 10, 11.5, 13.5, 15, 16.5, 20))
 axis(side = c(2))
+dev.off()
