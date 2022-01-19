@@ -1,4 +1,4 @@
-library(tidyverse)library(tidyverse)
+library(tidyverse)
 
 
 ####WATER NUTRIENTS#####
@@ -49,8 +49,8 @@ ggplot(water_chem, aes(x = Distance, y = NH4_uM))+
   #                    low = "red",
   #                   mid = "yellow",
   #                  high = "blue") +
-  scalample, se_fill_manual(values = c("#e34a33","#fec44f", "#9ebcda")) +
-  scale_colour_manual(values = c("#e34a33","#fec44f", "#9+sampleebcda")) +
+  scale_fill_manual(values = c("#e34a33","#fec44f", "#9ebcda")) +
+  scale_colour_manual(values = c("#e34a33","#fec44f", "#9ebcda")) +
   theme_classic() +
   theme(axis.text.y = element_text(family = "Helvetica", size=12, colour='black'),
         axis.title.y = element_text(family = "Helvetica", size=14,  colour='black'), 
@@ -80,66 +80,63 @@ water_chem_summaryb <- water_chem %>%
 #--------------------------------------------------------------------------------
 ## Excretion maps
 ## Bart DiFiore
-## Code originally written: Oct-Aober, 6 2021
+## Code originally written: October, 6 2021
 #--------------------------------------------------------------------------------
-
 
 # Build maps based on Joey's model
 
-# So Joey's model essentially says that the y.intercept of the model (parameter d) if determined by the abund, "sample"ance of lobsters. The abundance of lobsters is a linear predictor of the excretion rates. Therefore, we use the slope (parameter e) to predict the decay rel, sampleationship (e.g. ~ distance) based on the idea that the total amount of ammonia produced in one hour is the concentration at zero. There was no difference in slope with the abundance of lobster, which simplifies matters. We will just use the total ammonia excreted in one hour as the concentration +sampleat zero and model the decay relationship with distance. There as also no difference with lobster abundance in the horizonal asymptote of the function. So similarly, I've used the mean across abudnance groups for the slope (e) and horizonal asymptote (c) parameters. To make sure that we are reaching zero, I will subtract the mean horizonal asymptote value from all predictions, so that we are correcting for background nitrogen production. 
+# So Joey's model essentially says that the y.intercept of the model (parameter d) if determined by the abundance of lobsters. The abundance of lobsters is a linear predictor of the excretion rates. Therefore, we use the slope (parameter e) to predict the decay relationship (e.g. ~ distance) based on the idea that the total amount of ammonia produced in one hour is the concentration at zero. There was no difference in slope with the abundance of lobster, which simplifies matters. We will just use the total ammonia excreted in one hour as the concentration at zero and model the decay relationship with distance. There as also no difference with lobster abundance in the horizonal asymptote of the function. So similarly, I've used the mean across abudnance groups for the slope (e) and horizonal asymptote (c) parameters. To make sure that we are reaching zero, I will subtract the mean horizonal asymptote value from all predictions, so that we are correcting for background nitrogen production. 
 
-fun <- function(distance, val+sampleue.0, slope = 0.6302233, h.asymptote = 0.93361){
+fun <- function(distance, value.0, slope = 0.6302233, h.asymptote = 0.93361){
   raw  = h.asymptote + (value.0-h.asymptote)*(exp(-distance/slope))
-  raw - h.asymptote # cor# temp <- d %>% dplyr::select(-junk) %>% group_by(plot, period, sample, dist_x, dist_y) %>%
-#   pivot_wider(names_from = period, values_from = z) %>%
-#   mutate(diff.z = (`Open season` - `Closed season`) / (`Closed season` + `Open season`))
-# 
-# 
-# ggplot(temp, aes(x = dist_x, y = dist_y ))+
-#   geom_raster(aes(fill = diff.z))+
-#   #scale_fill_gradient2( low = "blue", mid = "white", high = "red")+
-#   scale_fill_distiller(type = "div", palette = "RdBu", direction = 1)+
-#   facet_wrap(~plot+status)+
-#   theme_classic()
-# 
-# s = sum(sfdm_g), 
+  raw - h.asymptote # correct for background nitrogen
+}
+
+# Example
+df <- expand.grid(distance = seq(1, 4, length.out = 100), value.0 = c(100, 200, 400))
+df$y <- fun(distance = df$distance, value.0 = df$value.0)
+
+ggplot(df, aes(x = distance, y = y))+
+  geom_line(aes(color = as.factor(value.0)))
+
+
+# Build the maps
+pl <- read.csv("data/lobster_spatial.csv") %>% janitor::clean_names() %>%
+  mutate(date.d = lubridate::mdy(date)) %>%
+  separate(date, into = c("month", "day", "year"), sep = "[/]")
+
+
+lob <- pl %>% group_by( plot, period, status, year, month, day, date.d, sample, dist_x, dist_y) %>%
+  drop_na(dist_y, dist_x) %>%
+  dplyr::summarize(biomass = sum(sfdm_g), 
                    excr_total = sum(excr_ind)/60) %>% # make it per minute!!! 
   mutate(temp = ifelse(period == "Closed season", "C", "O"), 
-         id = paste(# temp <- d %>% dplyr::select(-junk) %>% group_by(plot, period, dist_x, dist_y) %>%
-#   pivot_wider(names_from = period, values_from = z) %>%
-#   mutate(diff.z = (`Open season` - `Closed season`) / (`Closed season` + `Open season`)) %>%
-#   rename(open = `Open season`, closed = `Closed season`)
-# 
-# ggplot(temp, aes(x = closed, y = open))+
-#   geom_point(aes(color = plot, shape = status))+
-#   facet_wrap(~ plot)
-# 
-# ggplot(d, aes(x = period, y = z))+
-#   geom_boxplot(aes(color = status))
-# 
-# library(lme4)
-# library(lmerTest)
-# mod.lmer <- lmer(z ~ period*status + (1|plot), d)
-# summary(mod.lmer)
-# car::qqPlot(residuals(mod.lmer))
-# hist(residuals(mod.lmer))
-# 
-# 
-# ls_means(mod.lmer, which = c(""))
-# emmeans::emmeans(mod.lmer,  ~ period * status,)
-# 
-# 
-# pred <- ggeffects::ggpredict(mod.lmer, terms = ~period*status)
-# 
-# plot(pred)
-# 
-# 
-# mod.glmer <- glmer(z ~ period*status + (1|plot), d, family = Gamma(link = "log"))
-# summary(mod.glmer)
-# car::qqPlot(residuals(mod.glmer))
-# hist(residuals(mod.glmer))
-# pred <- ggeffects::ggpredict(mod.glmer, terms = ~period*status)
-# _total[i]) # predict the contribution to the z variable from each focal point to each other point in the grid
+         id = paste(plot, temp, year, month, day, sep = "-"))
+
+ggplot(lob, aes(x = dist_x, y = dist_y))+
+  geom_point(aes(size = excr_total))+
+  facet_wrap(~id)
+
+
+# Build a function to estimate nitrogen at every point in the grid. 
+
+grid <- expand.grid(dist_x = seq(0, 20, length.out = 100), dist_y = seq(0,20, length.out = 100)) # construct a grid of points across which to estiamte nitrogen
+plot(grid) # just confirm
+
+lob <- as.data.frame(lob)
+
+
+bd_fun <- function(data,group){
+  dat <- data[data$id == group,]
+  points <- dat[,c("dist_x", "dist_y")]
+  excr_total <- dat[, c("excr_total")]
+  out <- t(fields::rdist(points, grid)) # estimate the euclidean distance from each focal point to each other point in the grid, transpose such that the matrix is organized where each row is a different grid point, and each column is a different focal point
+  
+  temp <- matrix(nrow = dim(out)[1], ncol = dim(out)[2]) # build a matrix to store the output of the for loop
+  
+  
+  for(i in 1:dim(out)[2]){
+    temp[,i] <- fun(distance = out[,i], value.0 = excr_total[i]) # predict the contribution to the z variable from each focal point to each other point in the grid
   }
   
   z <- temp %*% matrix(data = 1, nrow = dim(out)[2], ncol = 1) # sum across rows in the matrix, such that it is the sum of the contributions to Z from each focal point where lobsters are located
@@ -152,7 +149,7 @@ fun <- function(distance, val+sampleue.0, slope = 0.6302233, h.asymptote = 0.933
 
 
 
-test <- bd_fun(lob, group = "CC1-C")
+test <- bd_fun(lob, group = "CC1-C-19-9-14")
 
 out <- list()
 id <- unique(lob$id)
@@ -161,99 +158,95 @@ for(i in 1:length(id)){
   out[[i]] <- bd_fun(lob, group = id[i])
 }
 
+formerge <- lob %>% distinct(plot, status)
 
 d <- bind_rows(out) %>% 
-  left_join(distinct(dplyr::select(lob, c(period, status, id)))) %>% 
-  separate(id, into = c("plot", "junk"), sep = "[-]")
-  
-  
-  
-  res <- df %>% mutate(category=cut(a, breaks=c(-Inf, 0.5, 0.6, Inf), labels=c("low","middle","high")))
+  separate(id, into = c("plot", "period", "year", "month", "day"), sep = "[-]") %>%
+  mutate(period = ifelse(period == "O", "Open season", "Closed season")) %>%
+  left_join(formerge)
 
-d %>% group_by(plot, period) %>% 
-  summarize(mean = mean(z, na.rm = T))
+write.csv(x = d, "data/derived_excretionestimates.csv", quote = F, row.names = F)
+
+#------------------------------------------------------------
+## Plot up the maps
+#------------------------------------------------------------
+
+# Build a multipanel plot, each panel is a heat map of the mean or SD of lobster derived nitrogen
+
+forplot <- d %>% 
+  group_by(dist_x, dist_y, plot, status) %>%
+  summarize(Magnitude = mean(z), 
+            sd = sd(z), 
+            Consistency = 1/(sd(z)/mean(z)))
+
+p1 <- forplot %>% filter(status == "Reserve") %>%
+  pivot_longer(cols = c(Magnitude, Consistency )) %>%
+  mutate(name = forcats::fct_rev(name)) %>%
+  ggplot(aes(x = dist_x, y = dist_y))+ # plot it up! 
+  geom_raster(aes(fill = value))+
+  viridis::scale_fill_viridis(trans = "log1p")+
+  facet_grid(plot ~ name)+
+  labs(x = "", y = "", title = "Reserve sites")+
+  theme_classic()
+
+ggsave("figures/reserve.png", p1, width = 8.5, height = 8.5)
+
+p2 <- forplot %>% filter(status == "Off reserve") %>%
+  pivot_longer(cols = c(Magnitude, Consistency)) %>%
+  mutate(name = forcats::fct_rev(name)) %>%
+  ggplot(aes(x = dist_x, y = dist_y))+ # plot it up! 
+  geom_raster(aes(fill = value))+
+  viridis::scale_fill_viridis(trans = "log1p")+
+  facet_grid(plot ~ name)+
+  labs(x = "", y = "", title = "Off reserve sites")+
+  theme_classic()
+ggsave("figures/offreserve.png", p2, width = 8.5, height = 8.5)
+
+# Build a multipanel plot of magnitude for each plot before and after season opened
+
+p3 <- d %>%
+  group_by(dist_x, dist_y, plot, period, status) %>%
+  summarize(Magnitude = mean(z)) %>%
+  ggplot(aes(dist_x, dist_y))+
+  geom_raster(aes(fill = Magnitude))+
+  viridis::scale_fill_viridis(trans = "log1p")+
+  facet_grid(plot ~ period)+
+  labs(x = "", y = "")+
+  theme_classic()
+
+ggsave("figures/magnitudeXperiod.png", p3, width = 8.5, height = 2*8.5)
+
+
+
 
 
 ggplot(d, aes(x = dist_x, y = dist_y))+ # plot it up! 
   geom_raster(aes(fill = z))+
   geom_point(data = lob, aes(dist_x, dist_y, size = excr_total), color = "red", pch = 21)+
   viridis::scale_fill_viridis(trans = "log1p")+
-  facet_wrap(~plot+period)+
+  facet_wrap(~id)+
   theme_classic()
 
 ggsave("figures/lobster_maps.png", width = 15, height = 12)
 
 
-plot <- unique(lob$plot)
-for(i in plot){
+id <- unique(lob$id)
+for(i in id){
   temp_plot <- ggplot(data = subset(d, plot == i), aes(x = dist_x, y = dist_y))+ # plot it up! 
     geom_raster(aes(fill = z))+
     geom_point(data = subset(lob, plot == i), aes(dist_x, dist_y, size = biomass), color = "red", pch = 21)+
     viridis::scale_fill_viridis(trans = "log1p")+
     labs(title = paste0("plot_", i))+
-    facet_wrap(~period)+
     theme_classic()
   
   ggsave(temp_plot, path = "figures/", file=paste0("plot_", i,".png"), width = 14, height = 10, units = "cm")
   
 }
 
-temp <- d %>% dplyr::select(-junk) %>% group_by(plot, period, dist_x, dist_y) %>%
-  pivot_wider(names_from = period, values_from = z) %>%
-  mutate(diff.z = (`Open season` - `Closed season`) / (`Closed season` + `Open season`))
 
 
-ggplot(temp, aes(x = dist_x, y = dist_y ))+
-  geom_raster(aes(fill = diff.z))+
-  #scale_fill_gradient2( low = "blue", mid = "white", high = "red")+
-  scale_fill_distiller(type = "div", palette = "RdBu", direction = 1)+
-  facet_wrap(~plot+status)+
-  theme_classic()
-
-ggsave(filename = "figures/difference.png", width = 10, height = 8)
 
 
-write.csv(x = d, "data/derived_excretionestimates.csv", quote = F, row.names = F)
-
-
-# Statistical analyses
-
-
-temp <- d %>% dplyr::select(-junk) %>% group_by(plot, period, dist_x, dist_y) %>%
-  pivot_wider(names_from = period, values_from = z) %>%
-  mutate(diff.z = (`Open season` - `Closed season`) / (`Closed season` + `Open season`)) %>%
-  rename(open = `Open season`, closed = `Closed season`)
-
-ggplot(temp, aes(x = closed, y = open))+
-  geom_point(aes(color = plot, shape = status))+
-  facet_wrap(~ plot)
-
-ggplot(d, aes(x = period, y = z))+
-  geom_boxplot(aes(color = status))
-
-library(lme4)
-library(lmerTest)
-mod.lmer <- lmer(z ~ period*status + (1|plot), d)
-summary(mod.lmer)
-car::qqPlot(residuals(mod.lmer))
-hist(residuals(mod.lmer))
-
-
-ls_means(mod.lmer, which = c(""))
-emmeans::emmeans(mod.lmer,  ~ period * status,)
-
-
-pred <- ggeffects::ggpredict(mod.lmer, terms = ~period*status)
-
-plot(pred)
-
-
-mod.glmer <- glmer(z ~ period*status + (1|plot), d, family = Gamma(link = "log"))
-summary(mod.glmer)
-car::qqPlot(residuals(mod.glmer))
-hist(residuals(mod.glmer))
-pred <- ggeffects::ggpredict(mod.glmer, terms = ~period*status)
-plot(pred)
 
 
 
